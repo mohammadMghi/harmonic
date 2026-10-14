@@ -5,6 +5,8 @@ TOKEN_TYPES = [
     ('IDENTIFIER', r'[a-zA-Z_][a-zA-Z0-9_]*'),
     ('NUMBER', r'\d+'),
     ('ASSIGN', r'='),
+    ('LPAREN', r'\('),
+    ('RPAREN', r'\)'),
     ('PLUS', r'\+'),
     ('MULTIPLY', r'\*'),
     ('DIVIDE', r'/'),
@@ -74,7 +76,108 @@ def get_value(token, variables):
         return variables[token[1]]
 
 
-def evaluate_expression(tokens, variables):
+def evaluate_values(values): 
+    i = 1
+
+    while i < len(values) - 1:
+        operator = values[i]
+        left = values[i - 1]
+        right = values[i + 1]
+
+        if operator == 'MULTIPLY':
+            values[i - 1] = left * right
+            del values[i:i + 2]
+
+        elif operator == 'DIVIDE':
+            values[i - 1] = left / right
+            del values[i:i + 2]
+
+        else:
+            i += 2
+ 
+    result = values[0]
+
+    for i in range(1, len(values), 2):
+        operator = values[i]
+        right = values[i + 1]
+
+        if operator == 'PLUS':
+            result += right
+
+        elif operator == 'MINUS':
+            result -= right
+
+    return result
+
+
+def evaluate_expression(tokens, variables): 
+    values = []
+
+    for token in tokens:
+        if token[0] in ('NUMBER', 'IDENTIFIER'):
+            values.append(get_value(token, variables))
+        else:
+            values.append(token[0])
+ 
+    while 'LPAREN' in values:
+        j = values.index('LPAREN')
+
+        k = j + 1
+        paren_count = 1
+
+        while k < len(values) and paren_count > 0:
+            if values[k] == 'LPAREN':
+                paren_count += 1
+
+            elif values[k] == 'RPAREN':
+                paren_count -= 1
+
+            k += 1
+
+        if paren_count != 0:
+            raise SyntaxError("Unclosed parenthesis")
+
+        inner_values = values[j + 1:k - 1]
+        inner_result = evaluate_values_with_parentheses(
+            inner_values
+        )
+
+        values[j:k] = [inner_result]
+ 
+    if 'RPAREN' in values:
+        raise SyntaxError("Unexpected closing parenthesis")
+ 
+    return evaluate_values(values)
+
+
+def evaluate_values_with_parentheses(values): 
+    values = values.copy()
+
+    while 'LPAREN' in values:
+        j = values.index('LPAREN')
+        k = j + 1
+        paren_count = 1
+
+        while k < len(values) and paren_count > 0:
+            if values[k] == 'LPAREN':
+                paren_count += 1
+            elif values[k] == 'RPAREN':
+                paren_count -= 1
+            k += 1
+
+        if paren_count != 0:
+            raise SyntaxError("Unclosed parenthesis")
+
+        inner_result = evaluate_values_with_parentheses(
+            values[j + 1:k - 1]
+        )
+
+        values[j:k] = [inner_result]
+
+    if 'RPAREN' in values:
+        raise SyntaxError("Unexpected closing parenthesis")
+
+    return evaluate_values(values)
     values = []
  
     for token in tokens:
@@ -82,8 +185,29 @@ def evaluate_expression(tokens, variables):
             values.append(get_value(token, variables))
         else:
             values.append(token[0])
+ 
+    j = 1
+    while j < len(values) - 1:
+        if values[j] == 'LPAREN':
+            k = j + 1
+            paren_count = 1
 
-    print(values)
+            while k < len(values) and paren_count > 0:
+                if values[k] == 'LPAREN':
+                    paren_count += 1
+                elif values[k] == 'RPAREN':
+                    paren_count -= 1
+                k += 1
+
+            inner_values = values[j + 1:k - 1]
+            inner_result = evaluate_expression(inner_values, variables)
+
+            values[j - 1:j + (k - j)] = [inner_result]
+
+        else:
+            j += 2
+
+
  
     i = 1
 
@@ -145,11 +269,22 @@ def parse_and_run(code):
         
 
 code = """
-let a = 2
-let d = 2
-let b = d + a * 3
-let c = b / 2
+let a = 2 * (3 + 4)
+let b = 2 + 3 * 4
+let c = 2 * (3 + (4 * 5))
+print a
+print b
 print c
 """
 
 parse_and_run(code)
+
+# code = """
+# let a = 2
+# let d = 2
+# let b = d + a * 3
+# let c = b / 2
+# print c
+# """
+
+# parse_and_run(code)
