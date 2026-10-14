@@ -6,6 +6,8 @@ TOKEN_TYPES = [
     ('NUMBER', r'\d+'),
     ('ASSIGN', r'='),
     ('PLUS', r'\+'),
+    ('MULTIPLY', r'\*'),
+    ('DIVIDE', r'/'),
     ('MINUS', r'-'),
     ('SKIP', r'[ \t\r]+'),
     ('NEWLINE', r'\n'),
@@ -73,15 +75,42 @@ def get_value(token, variables):
 
 
 def evaluate_expression(tokens, variables):
-    result = get_value(tokens[0], variables)
+    values = []
+ 
+    for token in tokens:
+        if token[0] in ('NUMBER', 'IDENTIFIER'):
+            values.append(get_value(token, variables))
+        else:
+            values.append(token[0])
 
-    for i in range(1, len(tokens), 2):
-        operator = tokens[i][0]
-        right = get_value(tokens[i + 1], variables)
+    print(values)
+ 
+    i = 1
+
+    while i < len(values) - 1:
+        operator = values[i]
+        left = values[i - 1]
+        right = values[i + 1]
+
+        if operator == 'MULTIPLY':
+            values[i - 1] = left * right
+            del values[i:i + 2]
+
+        elif operator == 'DIVIDE':
+            values[i - 1] = left / right
+            del values[i:i + 2]
+
+        else:
+            i += 2
+ 
+    result = values[0]
+
+    for i in range(1, len(values), 2):
+        operator = values[i]
+        right = values[i + 1]
 
         if operator == 'PLUS':
             result += right
-
         elif operator == 'MINUS':
             result -= right
 
@@ -115,5 +144,12 @@ def parse_and_run(code):
             print(variables[name])
         
 
-code = 'let a = 10\nlet b = a + 5\nprint b'
+code = """
+let a = 2
+let d = 2
+let b = d + a * 3
+let c = b / 2
+print c
+"""
+
 parse_and_run(code)
