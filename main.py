@@ -240,27 +240,43 @@ def evaluate_values_with_parentheses(values):
 
     return result
 
+def parse_let(line):
+    if len(line) < 4:
+        raise SyntaxError("Invalid let statement")
+
+    if line[0][0] != 'LET':
+        raise SyntaxError("Expected LET")
+
+    if line[1][0] != 'IDENTIFIER':
+        raise SyntaxError("Expected variable name")
+
+    if line[2][0] != 'ASSIGN':
+        raise SyntaxError("Expected '='")
+
+    if len(line[3:]) == 0:
+        raise SyntaxError("Expected expression")
+
+    return line[1][1], line[3:]
 
 def parse_and_run(code):
-    tokens = lexer(code)
+    tokens = lexer(code) 
     lines = split_lines(tokens)
 
     variables = {}
     
     for line in lines:
         if line[0][0] == 'LET':
-            name = line[1][1]
+            name, expression_tokens = parse_let(line)
             if name in variables:
                 raise NameError(f"Variable already defined: {name}")
-
-            expression_tokens = line[3:]
+ 
             value = evaluate_expression(expression_tokens, variables)
 
             variables[name] = value
 
 
         elif line[0][0] == 'PRINT':
-            name = line[1][1]
+            name, expression_tokens = parse_let(line)
 
             if name not in variables:
                 raise NameError(f"Undefined variable: {name}")
