@@ -150,6 +150,7 @@ def evaluate_expression(tokens, variables):
     return evaluate_values(values)
 
 
+
 def evaluate_values_with_parentheses(values): 
     values = values.copy()
 
@@ -240,6 +241,54 @@ def evaluate_values_with_parentheses(values):
 
     return result
 
+
+def validate_expression(tokens):
+    if not tokens:
+        raise SyntaxError("Empty expression")
+
+    expecting_value = True
+    paren_count = 0
+
+    for kind, value in tokens:
+        if expecting_value:
+            if kind in ('NUMBER', 'IDENTIFIER'):
+                expecting_value = False
+
+            elif kind == 'LPAREN':
+                paren_count += 1
+
+            else:
+                raise SyntaxError(
+                    f"Expected a value, got {value!r}"
+                )
+
+        else:
+            if kind in (
+                'PLUS', 'MINUS',
+                'MULTIPLY', 'DIVIDE'
+            ):
+                expecting_value = True
+
+            elif kind == 'RPAREN':
+                paren_count -= 1
+
+                if paren_count < 0:
+                    raise SyntaxError(
+                        "Unexpected closing parenthesis"
+                    )
+
+            else:
+                raise SyntaxError(
+                    f"Expected an operator, got {value!r}"
+                )
+
+    if expecting_value:
+        raise SyntaxError("Expression cannot end with an operator")
+
+    if paren_count != 0:
+        raise SyntaxError("Unclosed parenthesis")
+
+
 def parse_let(line):
     if len(line) < 4:
         raise SyntaxError("Invalid let statement")
@@ -253,10 +302,11 @@ def parse_let(line):
     if line[2][0] != 'ASSIGN':
         raise SyntaxError("Expected '='")
 
-    if len(line[3:]) == 0:
-        raise SyntaxError("Expected expression")
+    expression_tokens = line[3:]
 
-    return line[1][1], line[3:]
+    validate_expression(expression_tokens)
+
+    return line[1][1], expression_tokens
 
 def parse_and_run(code):
     tokens = lexer(code) 
